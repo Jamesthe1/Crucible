@@ -1,0 +1,1 @@
+﻿Place all .jar mods within this folder if you wish to import manually.

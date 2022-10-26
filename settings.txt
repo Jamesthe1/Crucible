@@ -1,0 +1,8 @@
+dimensions=1024x768
+disabledFolder=disabled
+minecraftDirectory=%appdata%\.minecraft
+modImports=\Users\%username%\Downloads
+defaultProfile=default
+defaultMenu=Mods
+moveModsToProfile=true
+theme=crucible

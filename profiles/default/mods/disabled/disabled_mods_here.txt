@@ -1,0 +1,1 @@
+﻿Place .jar files that you don't want active here
