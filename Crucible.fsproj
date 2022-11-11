@@ -76,6 +76,7 @@
     <Compile Include="ProfileManagement.fs" />
     <Compile Include="InputManagement.fs" />
     <Compile Include="Menus.fs" />
+    <Compile Include="Init.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

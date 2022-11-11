@@ -18,6 +18,7 @@ let deleteFile filepath = File.Delete filepath
 let listFiles rawDir =
     (replaceEnvs rawDir
      |> Directory.EnumerateFiles).ToArray ()
+
 let listDirs rawDir =
     (replaceEnvs rawDir
      |> Directory.EnumerateDirectories).ToArray ()
@@ -26,6 +27,7 @@ let listDirs rawDir =
 let moveFile filepath toDir =
     let filename = getFilename filepath
     File.Move(filepath, toDir + "/" + filename)
+
 let moveFiles fromDir toDir =
     listFiles fromDir
     |> Array.iter (fun f -> replaceEnvs toDir
@@ -35,6 +37,7 @@ let readFileKV filepath =
     readFile filepath
     |> Array.map (fun s -> splitToTuple s '=')
     |> Map.ofArray
+
 let getSetting setting =
     readFileKV "settings.txt"
     |> Map.find setting
@@ -50,8 +53,8 @@ let readModArchive (filepath: string) (archive: ZipArchive) =
     with
         | :? NullReferenceException -> Failure filepath
 
-let readModMetadata filepath =
-    using (readZip filepath) (readModArchive filepath)
+let readModMetadata filepath = using (readZip filepath) (readModArchive filepath)
+
 let formatMetadata rawData filepath =
     let filename = getFilename filepath
     let root = JsonValue.Parse rawData
@@ -59,18 +62,40 @@ let formatMetadata rawData filepath =
     | JsonValue.Array infoArr -> extractModInfo infoArr.[0] filename
     | _ -> let infoArr = jsonPropertyArr root "modList"
            extractModInfo infoArr.[0] filename
+
 let fetchMetadata filepath =
     match readModMetadata filepath with
     | Success s -> formatMetadata s filepath
     | Failure f -> { ModMetadata.empty with Filename = getFilename f }
+
 let readAllMetadata filepaths =
     filepaths
     |> Array.map fetchMetadata
+
+let filterModsRegex regex arr =
+    Array.filter (fun (m: ModMetadata) -> regexMatches m.DisplayName regex) arr
+
 let listAllMods enabled rawDir =
     listFiles rawDir
     |> Array.filter (fun (f: string) -> Path.GetExtension f = ".jar")
     |> readAllMetadata
     |> Array.map (fun m -> { m with Enabled = enabled })
 
+let listAllModsRegex enabled rawDir regex =
+    listAllMods enabled rawDir
+    |> filterModsRegex regex
+
 let printMod (m: ModMetadata) = printfn "%A" m
 let printAllMods mods = Array.iter (fun m -> printMod m) mods
+
+let confirmDelete list stringifyFunc deleteFunc =
+    printf "Are you sure you want to delete the following? "
+    Array.map stringifyFunc list
+    |> printStrArray
+    printf "They will be deleted forever!\ny/N> "
+    let confirm = Console.ReadKey()
+    printNewline()
+
+    match confirm.Key with
+    | ConsoleKey.Y -> Array.iter deleteFunc list
+    | _ -> ()

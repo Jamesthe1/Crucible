@@ -7,11 +7,11 @@ open FCMD.Command
 open FileManagement
 open Utils
 
-let toProfilePath profile = "./profiles/" + profile + "/mods"
+let toProfilePath profile = "./profiles/" + profile
+let toProfileModPath profile = toProfilePath profile + "/mods"
 
-// Inref must be declared again because the variable coming in gets de-referenced
 let getProfileMods profile =
-    toProfilePath profile
+    toProfileModPath profile
     |> fun root -> root + "/" + getSetting "disabledFolder"
                    |> listAllMods false
                    |> Array.append (listAllMods true root)
@@ -25,10 +25,13 @@ let getProfileModByName profile name =
 
 let getProfileModsRegex profile regex =
     getProfileMods profile
-    |> Array.filter (fun m -> regexMatches m.DisplayName regex)
+    |> filterModsRegex regex
+
+let private getProfileModsRegexes profile args =
+    expandArray (getProfileModsRegex profile) args
                     
 let setModEnableStatus profile regex enabled =
-    let profilePath = toProfilePath profile
+    let profilePath = toProfileModPath profile
     let disabledPath = profilePath + "/" + getSetting "disabledFolder"
 
     getProfileModsRegex profile regex
@@ -48,64 +51,82 @@ let setModEnableStatus profile regex enabled =
                                                          printfn "Error: %s" e.Message
                   )
 
-let deleteModsInProfile profile regex =
-    let profilePath = toProfilePath profile
-    let disabledPath = profilePath + "/" + getSetting "disabledFolder"
-    getProfileModsRegex profile regex
-    |> Array.iter (fun m -> let fnameInDir = "/" + m.Filename
-                            if m.Enabled then profilePath + fnameInDir else disabledPath + fnameInDir
-                            |> deleteFile
-                  )
+let deleteModInProfile profile modData =
+    let modsPath = toProfileModPath profile
+    let disabledPath = modsPath + "/" + getSetting "disabledFolder"
+    let fnameInDir = "/" + modData.Filename
+    if modData.Enabled then
+        modsPath
+    else
+        disabledPath
+    + fnameInDir
+    |> deleteFile
+
+let addProfile name =
+    try
+        Directory.CreateDirectory("./profiles/" + name)
+        |> fun d -> d.CreateSubdirectory "mods"
+        |> fun d -> d.CreateSubdirectory "disabled"
+        |> ignore
+    with
+    | :? Exception as e -> failwith("Could not create profile: " + e.Message)
+
+let deleteProfile name =
+    Directory.Delete("./profiles/" + name)
 
 let listProfiles () =
     listDirs "./profiles"
 
 let listProfilesRegex regex =
-    listProfiles ()
-    |> Array.filter (fun s -> regexMatches s regex)
+    listProfiles()
+    |> Array.filter(fun s -> regexMatches s regex)
 
-let private getProfileModsRegexes profile args =
-    Array.map (fun arg -> getProfileModsRegex profile arg) args
-    |> Array.concat
+let private listProfilesRegexes args =
+    expandArray listProfilesRegex args
 
 let getModCommands ptrTuple: FuncCommands =
+    let setRegexModEnable status aList =
+        failOnNoArg aList
+        let profile = strFromPtr ptrTuple
+        for arg in aList do
+            setModEnableStatus profile arg status
+
+    let mcDir = getSetting "minecraftDirectory"
+    let modsPath = mcDir + "/mods"
+
+    let listMCMods () = listAllMods true modsPath
+    let listMCModsRegex regex = listMCMods()
+                                |> filterModsRegex regex
+
     FuncCommands [ ("list", { Function = fun aList -> let profile = strFromPtr ptrTuple
                                                       if aList.Length = 0 then
                                                           getProfileMods profile
                                                       else
                                                           getProfileModsRegexes profile aList
                                                       |> printAllMods
-                              Description = "Lists all mods in the current profile\n=\t<args>: Gives a filtered mod list, uses regex"
+                              Description = "Lists all mods in the current profile\n--\t\t<args>: Gives a filtered mod list, uses regex"
                             }
                    )
-                   ("disable", { Function = fun aList -> failOnNoArg aList
-                                                         let profile = strFromPtr ptrTuple
-                                                         for arg in aList do
-                                                             setModEnableStatus profile arg false
+                   ("listApplied", { Function = fun aList -> if aList.Length = 0 then
+                                                                 listMCMods()
+                                                             else
+                                                                 expandArray listMCModsRegex aList
+                                                             |> printAllMods
+                                     Description = "Lists all mods currently applied\n--\t\t<args>: Gives a filtered mod list, uses regex"
+                                   }
+                   )
+                   ("disable", { Function = setRegexModEnable false
                                  Description = "Disables mods by names, uses regex"
                                }
                    )
-                   ("enable",  { Function = fun aList -> failOnNoArg aList
-                                                         let profile = strFromPtr ptrTuple
-                                                         for arg in aList do
-                                                             setModEnableStatus profile arg true
+                   ("enable",  { Function = setRegexModEnable true
                                  Description = "Enables mods by names, uses regex"
                                }
                    )
                    ("delete", { Function = fun aList -> failOnNoArg aList
                                                         let profile = strFromPtr ptrTuple
-                                                        printf "Are you sure you want to delete the following? "
-                                                        getProfileModsRegexes profile aList
-                                                        |> Array.map (fun m -> m.DisplayName)
-                                                        |> printStrArray
-                                                        printf "They will be deleted forever!\ny/N> "
-                                                        let confirm = Console.ReadKey()
-                                                        printfn ""
-
-                                                        match confirm.Key with
-                                                        | ConsoleKey.Y -> for arg in aList do
-                                                                              deleteModsInProfile profile arg
-                                                        | _ -> ()
+                                                        let mods = getProfileModsRegexes profile aList
+                                                        confirmDelete mods (fun m -> m.DisplayName) (deleteModInProfile profile)
                                 Description = "Deletes mods by names, uses regex"
                               }
                    )
@@ -118,16 +139,34 @@ let getModCommands ptrTuple: FuncCommands =
                                 Description = "Gets the details of a mod by name. Requires full name, only uses the first argument"
                               }
                    )
+                   ("apply", { Function = fun _ -> let profile = strFromPtr ptrTuple
+                                                   moveFiles (toProfileModPath profile) modsPath
+                               Description = "Moves current profile's mods to the game's folder"
+                             }
+                   )
+                   ("fetch", { Function = fun _ -> strFromPtr ptrTuple
+                                                   |> toProfileModPath
+                                                   |> moveFiles modsPath
+                               Description = "Moves mods already in the game directory to the current profile"
+                             }
+                   )
                  ]
 
-let getProfileCommands (ptr, len): FuncCommands =
+let getProfileCommands (ptr: UmgdString, len): FuncCommands =
+    let mcDir = getSetting "minecraftDirectory"
+    let modsPath = mcDir + "/mods"
+
+    let getModCommand ptrTuple cmd =
+        getModCommands ptrTuple
+        |> fun cmds -> cmds.[cmd]
+
     FuncCommands [ ("list", { Function = fun aList -> if aList.Length = 0 then
                                                           listProfiles()
                                                       else
                                                           Array.map (fun (arg: string) -> listProfilesRegex arg) aList
                                                           |> Array.concat
                                                       |> printStrArray
-                              Description = "Lists all profiles\n=\t<args>: Gives a filtered profile list, uses regex"
+                              Description = "Lists all profiles\n--\t\t<args>: Gives a filtered profile list, uses regex"
                             }
                    )
                    ("use", { Function = fun aList -> failOnNoArg aList
@@ -145,13 +184,34 @@ let getProfileCommands (ptr, len): FuncCommands =
                    )
                    ("add", { Function = fun aList -> failOnNoArg aList
                                                      for arg in aList do
-                                                        try
-                                                            Directory.CreateDirectory ("./profiles/" + arg)
-                                                            |> ignore
-                                                        with
-                                                        | :? Exception as e -> failwith ("Could not create profile: " + e.Message)
+                                                        addProfile arg
                              Description = "Creates new profiles by names"
                            }
+                   )
+                   ("delete", { Function = fun aList -> failOnNoArg aList
+                                                        let profiles = listProfilesRegexes aList
+                                                        confirmDelete profiles (fun f -> f) deleteProfile
+                                Description = "Deletes profiles by names, uses regex"
+                              }
+                   )
+                   ("apply", { Function = fun aList -> let profile = if aList.Length = 0 then
+                                                                         strFromPtr (ptr, len)
+                                                                     else
+                                                                         aList.[0]
+                                                       moveFiles (toProfileModPath profile) modsPath
+                               Description = getModCommand (ptr, len) "apply"
+                                             |> fun fdef -> $"{fdef.Description}\n--\t\t<arg>: Uses the given profile, requires full name"
+                             }
+                   )
+                   ("fetch", { Function = fun aList -> let profile = if aList.Length = 0 then
+                                                                         strFromPtr (ptr, len)
+                                                                     else
+                                                                         aList.[0]
+                                                       toProfileModPath profile
+                                                       |> moveFiles modsPath
+                               Description = getModCommand (ptr, len) "fetch"
+                                             |> fun fdef -> $"{fdef.Description}\n--\t\t<arg>: Moves mods to the given profile, requires full name"
+                            }
                    )
                    #if DEBUG
                    ("pcp", { Function = fun _ -> strFromPtr (ptr, len)

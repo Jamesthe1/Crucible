@@ -119,7 +119,7 @@ let strFromPtr (ptr: UmgdString, len) =
 let printError text =
     Console.ForegroundColor <- ConsoleColor.Red
     printfn "FAILED: %s" text
-    Console.ResetColor ()
+    Console.ResetColor()
 /// <summary>Prints the result value as a success or failure</summary>
 let printResult result =
     match result with
@@ -210,3 +210,10 @@ let stringTrueFalse (str: string) =
     match Boolean.TryParse str with
     | (true, b)  -> Success(b)
     | (false, _) -> Failure()
+
+let printNewline () =
+    printfn ""
+
+let expandArray func arr =
+    Array.map func arr
+    |> Array.concat
