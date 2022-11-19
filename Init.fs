@@ -1,11 +1,10 @@
 ﻿module Init
 
 open System
-open System.IO
 open FSharp.NativeInterop
-open FSharp.Data
 
 open FCMD.Command
+open FCMD.Types
 open FGUI.RuntimeMgr
 open FGUI.Elements
 open FGUI.TextureMgr
@@ -37,7 +36,7 @@ let initGraphics (screenxy: int[]) =
     printfn "Loading graphics..."
     let uiRoot = "UI/" + getSetting "theme" + "/"
     // The file is automatically appended to the end of the function
-    let themeData = using (File.Open (uiRoot + "meta.json", FileMode.Open)) JsonValue.Load
+    let themeData = readJsonFile (uiRoot + "meta.json")
 
     let elements: IElement[] = [| BaseQuad(-1.0f, 0.8f,  2.0f, 0.2f, 0.0f, 0.05f, 0.4f, 3, 0)
                                   BaseQuad(-0.2f, -0.9f, 1.1f, 1.6f, 0.0f, 0.1f,  0.1f, 2, 0)

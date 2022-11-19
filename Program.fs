@@ -15,7 +15,7 @@ let main args =
         |> Map.find "version"
     let screenxy =
         (getSetting "dimensions").Split 'x'
-        |> Array.map (fun d -> d |> int)
+        |> Array.map int
     let mutable profile = getSetting "defaultProfile"
     let profileNameLen = listProfiles()
                          |> getLongestStrLen
@@ -32,7 +32,7 @@ let main args =
 
     printfn "[Crucible Mod Manager %s] by Jamesthe1" buildVersion
     printfn "\tMinecraft directory is %s" mcDir
-    printfn "\tMod imports are fetched from %s" (getSetting "modImports")
+    printfn "\tImports are fetched from %s" (getSetting "modImports")
     
     if Array.contains "-terminal" args then
         initTerminal profileTuple menuCmds menuMap &&menu

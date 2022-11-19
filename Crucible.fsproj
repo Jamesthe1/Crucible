@@ -14,19 +14,22 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="fonts\lucon.ttf">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <Content Include="icons\icon16.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="icons\icon512.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="profiles\default\meta.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="profiles\default\mods\disabled\disabled_mods_here.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="profiles\default\mods\mods_here.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="templates\profile_meta.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="UI\crucible\bars.png">
@@ -71,7 +74,11 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <None Include="App.config" />
-    <Compile Include="Utils.fs" />
+    <Compile Include="Utils\StringHelper.fs" />
+    <Compile Include="Utils\ConsoleUtils.fs" />
+    <Compile Include="Utils\UtilTypes.fs" />
+    <Compile Include="Utils\TomlynWrapper.fs" />
+    <Compile Include="Utils\Utils.fs" />
     <Compile Include="FileManagement.fs" />
     <Compile Include="ProfileManagement.fs" />
     <Compile Include="InputManagement.fs" />
@@ -81,17 +88,22 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FSharp.Data" Version="4.2.8" />
-    <PackageReference Include="OpenTK" Version="4.7.2" />
+    <PackageReference Include="FSharp.Data" Version="5.0.2" />
+    <PackageReference Include="OpenTK" Version="4.7.5" />
+    <PackageReference Include="Tomlyn" Version="0.16.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="6.0.3" />
+    <PackageReference Update="FSharp.Core" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FCMD\FCMD.fsproj" />
     <ProjectReference Include="..\FGUI\FGUI.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="fonts\" />
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">

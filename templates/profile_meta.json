@@ -1,0 +1,9 @@
+{
+	"name": "",
+	"desc": "",
+	"movables": [
+		"options.txt",
+		"saves",
+		"config"
+	]
+}

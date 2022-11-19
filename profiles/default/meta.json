@@ -1,0 +1,9 @@
+{
+	"name": "Default",
+	"desc": "The default profile.",
+	"movables": [
+		"options.txt",
+		"saves",
+		"config"
+	]
+}
